@@ -20,7 +20,7 @@
 #define BUFFER_SIZE 100
 
 
-int handleNewConnection(int sockfd, int epollfd, struct epoll_event &ev_hint, std::unordered_map<int, FiberConn::HttpConnection> &fd_map)
+int handleNewConnection(int sockfd, int epollfd, struct epoll_event &ev_hint, std::unordered_map<int, FiberConn::HttpConnection *> &fd_map)
 {
     int newfd;
     struct sockaddr_storage client_addr;
@@ -69,18 +69,24 @@ int handleNewConnection(int sockfd, int epollfd, struct epoll_event &ev_hint, st
         std::cerr << "epoll ctl error: " << strerror(errno) << std::endl;
     }
 
+    FiberConn::HttpConnection *new_connection = new FiberConn::HttpConnection(newfd);
+
+    fd_map.insert({newfd, new_connection});
+
     return 0;
 }
 
-int handleAlreadyConnected(int sockfd, struct epoll_event &client_event, std::unordered_map<int, FiberConn::HttpConnection> &fd_map)
+int handleAlreadyConnected(int sockfd, struct epoll_event &client_event, std::unordered_map<int, FiberConn::HttpConnection *> &fd_map)
 {
 
     int clientfd = client_event.data.fd;
     uint32_t events_mask = client_event.events;
-    
+    FiberConn::HttpConnection *old_connection = fd_map[clientfd];
+
     if (events_mask & EPOLLHUP || events_mask & EPOLLERR || events_mask & EPOLLRDHUP)
     {
         // disconnect the client and clear its associated data structures
+        delete old_connection;
         std::cout << "client: " << clientfd << " disconnected --> EPOLL" << std::endl;
         close(clientfd);
     }
@@ -93,12 +99,14 @@ int handleAlreadyConnected(int sockfd, struct epoll_event &client_event, std::un
         while ((bytes_received = recv(clientfd, buffer, sizeof(buffer), 0)) > 0)
         {
             // append to http buffer
+            old_connection->req->appendToBuffer(buffer, bytes_received);
             std::cout << std::string(buffer, bytes_received) << std::endl;
         }
 
         if (bytes_received == 0)
         {
             // disconnect the client and clear its associated data structures
+            delete old_connection;
             std::cout << "client: " << clientfd << " disconnected --> RECV" << std::endl;
             close(clientfd);
         }
@@ -107,6 +115,9 @@ int handleAlreadyConnected(int sockfd, struct epoll_event &client_event, std::un
             if (errno == EAGAIN || errno == EWOULDBLOCK)
             {
                 std::cout << "client: " << clientfd << " no more data to read" << std::endl;
+            }
+            if(old_connection->req->request_complete){
+                old_connection->req->printRequest();
             }
         }
     }
@@ -216,7 +227,7 @@ int main(int argc, char *argv[])
         std::cerr << "epoll ctl error: " << strerror(errno) << std::endl;
         exit(1);
     }
-    std::unordered_map<int, FiberConn::HttpConnection> fd_map;
+    std::unordered_map<int, FiberConn::HttpConnection *> fd_map;
 
     while (true)
     {

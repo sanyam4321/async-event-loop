@@ -216,6 +216,7 @@ namespace FiberConn
                         if (length == 0)
                         {
                             request_complete = true;
+                            break;
                         }
                     }
                 }

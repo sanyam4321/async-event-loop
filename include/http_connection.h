@@ -27,6 +27,7 @@ namespace FiberConn
         {
             delete req;
             delete res;
+            std::cout<<"Connection Data Deleted!\n";
         }
     };
 }
