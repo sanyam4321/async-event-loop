@@ -1,6 +1,5 @@
 #pragma once
 
-#include <arpa/inet.h>
 #include <http_parser.h>
 
 namespace FiberConn
@@ -8,10 +7,8 @@ namespace FiberConn
     class HttpConnection
     {
     private:
+        bool isRequest;
         int socket_descriptor;
-
-        char ip_address[INET6_ADDRSTRLEN];
-        int port_address;
 
     public:
         FiberConn::HttpRequest *req;
