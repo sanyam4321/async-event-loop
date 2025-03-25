@@ -38,5 +38,9 @@ public:
         }
         return false;
     }
+    int getSize(){
+        std::shared_lock<std::shared_mutex> lock(mutex_);
+        return map_.size();
+    }
 };
 
