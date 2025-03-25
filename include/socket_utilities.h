@@ -76,8 +76,8 @@ namespace FiberConn
         return endpoint;
     }
 
-    /*Create Acceptor*/
-    int getAcceptor(struct addrinfo *endpoint, bool will_reuse, bool will_block)
+    /*Create Socket*/
+    int getSocket(struct addrinfo *endpoint, bool will_reuse, bool will_block)
     {
         int sockfd;
 
@@ -147,5 +147,59 @@ namespace FiberConn
             return -1;
         }
         return 0;
+    }
+    /*returns accepted socket*/
+    int acceptConnection(int listen_sock)
+    {
+        int newfd;
+        struct sockaddr_storage client_addr;
+        socklen_t addr_size = sizeof(client_addr);
+
+        if ((newfd = accept(listen_sock, (struct sockaddr *)&client_addr, &addr_size)) == -1)
+        {
+            std::cerr << "accept error: " << strerror(errno) << std::endl;
+            return -1;
+        }
+
+        if (fcntl(newfd, F_SETFL, O_NONBLOCK) == -1)
+        {
+            std::cerr << "socket non-blocking error: " << strerror(errno) << std::endl;
+            return -1;
+        }
+        char client_ip[INET6_ADDRSTRLEN];
+        int client_port;
+
+        if (client_addr.ss_family == AF_INET)
+        {
+            struct sockaddr_in *ipv4 = (struct sockaddr_in *)&client_addr;
+            inet_ntop(AF_INET, &ipv4->sin_addr, client_ip, sizeof(client_ip));
+            client_port = ntohs(ipv4->sin_port);
+        }
+        else if (client_addr.ss_family == AF_INET6)
+        {
+            struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *)&client_addr;
+            inet_ntop(AF_INET6, &ipv6->sin6_addr, client_ip, sizeof(client_ip));
+            client_port = ntohs(ipv6->sin6_port);
+        }
+        else
+        {
+            std::cerr << "Unknown address family" << std::endl;
+            close(newfd);
+        }
+
+        return newfd;
+    }
+    /*returns connected socket*/
+    int createConnection(int address_family, char *address, char *port)
+    {
+        struct addrinfo *endpoint = getEndpoint(address_family, false, address, port);
+        int sockfd = getSocket(endpoint, false, false);
+
+        if (connect(sockfd, endpoint->ai_addr, endpoint->ai_addrlen) == -1)
+        {
+            std::cerr << "connect error: " << strerror(errno) << std::endl;
+            return -1;
+        }
+        return sockfd;
     }
 }

@@ -56,13 +56,23 @@ namespace FiberConn
             delete events_;
         }
 
-        int asyncAccept(int sockfd, Callback cb)
+        int asyncAccept(int listen_sock, Callback cb)
         {
+            /*developer will have to write the logic of accepting the connection and asyncTrack it to reactor*/
+            /*callback will contain the listening sock*/
             /*it will register the main listening socket and register a callback in the map*/
-            addEpollInterest(epollfd_, sockfd, EPOLLIN);
-            event_callback_.insert(sockfd, cb);
+            addEpollInterest(epollfd_, listen_sock, EPOLLIN);
+            event_callback_.insert(listen_sock, cb);
             /*set listen sock fdtype to LISTEN_SOCK*/
-            event_type_.insert(sockfd, LISTEN_SOCK);
+            event_type_.insert(listen_sock, LISTEN_SOCK);
+            return 0;
+        }
+        
+        int asyncTrack(int sockfd, uint32_t mask){
+            return addEpollInterest(epollfd_, sockfd, mask);
+        }
+        int asyncRead(int sockfd, Callback cb){
+
         }
         int runCallback(std::pair<EventPriority, struct epoll_event> new_event)
         {
@@ -71,10 +81,7 @@ namespace FiberConn
             Callback cb;
             if (event_callback_.get(temp_fd, cb))
             {
-                /*before running the callback remove it from the map*/
-                event_callback_.remove(temp_fd);
                 cb(temp_fd);
-
                 return 0;
             }
             else
@@ -82,6 +89,7 @@ namespace FiberConn
                 std::cerr << "No callback found for fd: " << temp_fd << std::endl;
                 return -1;
             }
+            return 0;
         }
         int reactorRun()
         {
