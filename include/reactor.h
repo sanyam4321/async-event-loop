@@ -17,6 +17,12 @@ namespace FiberConn
         HIGH
     };
 
+    enum FDType
+    {
+        LISTEN_SOCK,
+        NEW_SOCK
+    };
+
     class IOReactor
     {
     private:
@@ -36,6 +42,7 @@ namespace FiberConn
 
         std::priority_queue<std::pair<EventPriority, struct epoll_event>, std::vector<std::pair<EventPriority, struct epoll_event>>, PQComparator> event_queue_;
         ThreadSafeMap<int, Callback> event_callback_;
+        ThreadSafeMap<int, FDType> event_type_;
 
     public:
         IOReactor(int max_events)
@@ -52,9 +59,30 @@ namespace FiberConn
         int asyncAccept(int sockfd, Callback cb)
         {
             /*it will register the main listening socket and register a callback in the map*/
+            /*set listen sock fdtype to LISTEN_SOCK*/
+            /*set new sock fdtype to NEW_SOCK*/
         }
-        int runCallback(std::pair<EventPriority, struct epoll_event>)
+        int runCallback(std::pair<EventPriority, struct epoll_event> new_event)
         {
+            /*get the callback from the hashmap and run it*/
+            int temp_fd = new_event.second.data.fd;
+            Callback cb;
+            if (event_callback_.get(temp_fd, cb))
+            {
+                // Run the callback.
+                cb();
+
+                // Remove the callback from the map after running it.
+                event_callback_.remove(temp_fd);
+                return 0;
+            }
+            else
+            {
+                // If no callback was found, you could log an error or handle it accordingly.
+                std::cerr << "No callback found for fd: " << temp_fd << std::endl;
+                return -1;
+            }
+            /*after running the callback remove it from the map*/
         }
         int reactorRun()
         {
@@ -79,10 +107,23 @@ namespace FiberConn
                         std::cerr << "epoll wait error: " << strerror(errno) << std::endl;
                         return -1;
                     }
+
                     for (int i = 0; i < num_events; i++)
                     {
                         /*Push all these events to priority queue*/
-                        event_queue_.push(std::make_pair(LOW, events_[i]));
+                        int temp_fd = events_[i].data.fd;
+                        EventPriority event_priority = LOW;
+                        FDType temp_fd_type;
+                        event_type_.get(temp_fd, temp_fd_type);
+                        if (temp_fd_type == LISTEN_SOCK)
+                        {
+                            event_priority = LOW;
+                        }
+                        else if (temp_fd_type == NEW_SOCK)
+                        {
+                            event_priority = HIGH;
+                        }
+                        event_queue_.push(std::make_pair(event_priority, events_[i]));
                     }
                 }
                 else
@@ -90,8 +131,6 @@ namespace FiberConn
                     /*Dead reactor*/
                     return 0;
                 }
-
-                /*Enqueue ready event handlers*/
             }
             return 0;
         }
