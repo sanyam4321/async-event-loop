@@ -61,18 +61,25 @@ namespace FiberConn
             /*developer will have to write the logic of accepting the connection and asyncTrack it to reactor*/
             /*callback will contain the listening sock*/
             /*it will register the main listening socket and register a callback in the map*/
-            addEpollInterest(epollfd_, listen_sock, EPOLLIN);
+            if(addEpollInterest(epollfd_, listen_sock, EPOLLIN) == -1){
+                std::cerr<<"async accept failed\n";
+                return -1;
+            }
             event_callback_.insert(listen_sock, cb);
             /*set listen sock fdtype to LISTEN_SOCK*/
             event_type_.insert(listen_sock, LISTEN_SOCK);
             return 0;
         }
-        
-        int asyncTrack(int sockfd, uint32_t mask){
-            return addEpollInterest(epollfd_, sockfd, mask);
-        }
-        int asyncRead(int sockfd, Callback cb){
 
+        int asyncTrack(int sockfd, uint32_t mask, Callback cb){
+            if(addEpollInterest(epollfd_, sockfd, mask) == -1){
+                std::cerr<<"Failed to add new fd to epoll\n";
+                return -1;
+            }
+            /*add the callback to map*/
+            event_callback_.insert(sockfd, cb);
+            event_type_.insert(sockfd, NEW_SOCK);
+            return 0;
         }
         int runCallback(std::pair<EventPriority, struct epoll_event> new_event)
         {
