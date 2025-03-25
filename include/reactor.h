@@ -7,7 +7,7 @@
 #include "socket_utilities.h"
 #include "thread_safe_map.h"
 
-using Callback = std::function<void()>;
+using Callback = std::function<void(int)>;
 
 namespace FiberConn
 {
@@ -59,8 +59,10 @@ namespace FiberConn
         int asyncAccept(int sockfd, Callback cb)
         {
             /*it will register the main listening socket and register a callback in the map*/
+            addEpollInterest(epollfd_, sockfd, EPOLLIN);
+            event_callback_.insert(sockfd, cb);
             /*set listen sock fdtype to LISTEN_SOCK*/
-            /*set new sock fdtype to NEW_SOCK*/
+            event_type_.insert(sockfd, LISTEN_SOCK);
         }
         int runCallback(std::pair<EventPriority, struct epoll_event> new_event)
         {
@@ -69,20 +71,17 @@ namespace FiberConn
             Callback cb;
             if (event_callback_.get(temp_fd, cb))
             {
-                // Run the callback.
-                cb();
-
-                // Remove the callback from the map after running it.
+                /*before running the callback remove it from the map*/
                 event_callback_.remove(temp_fd);
+                cb(temp_fd);
+
                 return 0;
             }
             else
             {
-                // If no callback was found, you could log an error or handle it accordingly.
                 std::cerr << "No callback found for fd: " << temp_fd << std::endl;
                 return -1;
             }
-            /*after running the callback remove it from the map*/
         }
         int reactorRun()
         {
