@@ -7,6 +7,7 @@
 #include <netinet/in.h>
 #include <errno.h>
 
+#include <unistd.h>
 int main(int argc, char *argv[])
 {
     if (argc < 3)
@@ -81,12 +82,11 @@ int main(int argc, char *argv[])
 
     freeaddrinfo(servlist);
 
-    char buffer[10];
-    int bytes_read;
-    bytes_read = recv(sockfd, buffer, sizeof(buffer), 0);
-    buffer[bytes_read] = '\0';
+    char buffer[] = "GET / HTTP/1.1";
+    int bytes_write;
+    bytes_write = send(sockfd, buffer, sizeof(buffer), 0);
     
-    std::cout<<bytes_read<<" "<< buffer<<std::endl;
-
+    std::cout<<bytes_write<<" "<< buffer<<std::endl;
+    sleep(100);
     return 0;
 }

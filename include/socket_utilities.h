@@ -197,7 +197,7 @@ namespace FiberConn
             std::cerr << "Unknown address family" << std::endl;
             close(newfd);
         }
-
+        std::cout<<"client ip: "<< client_ip << " client port: "<<client_port<<"\n";
         return newfd;
     }
     /*returns connected socket*/
@@ -209,7 +209,6 @@ namespace FiberConn
         if (connect(sockfd, endpoint->ai_addr, endpoint->ai_addrlen) == -1)
         {
             std::cerr << "connect error: " << strerror(errno) << std::endl;
-            return -1;
         }
         return sockfd;
     }

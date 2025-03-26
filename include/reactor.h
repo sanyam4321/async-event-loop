@@ -7,7 +7,7 @@
 #include "socket_utilities.h"
 #include "thread_safe_map.h"
 
-using Callback = std::function<void(int)>;
+using Callback = std::function<void(struct epoll_event)>;
 
 namespace FiberConn
 {
@@ -31,7 +31,7 @@ namespace FiberConn
             bool operator()(const std::pair<EventPriority, struct epoll_event> &a,
                             const std::pair<EventPriority, struct epoll_event> &b) const
             {
-                return a.first < b.first;
+                return a.first > b.first;
             }
         };
 
@@ -66,7 +66,7 @@ namespace FiberConn
             return 0;
         }
 
-        int addTrack(int sockfd, uint32_t mask, Callback cb, EventPriority priority){
+        int addTrack(int sockfd, uint32_t mask, EventPriority priority, Callback cb){
             if(addEpollInterest(epollfd_, sockfd, mask) == -1){
                 std::cerr<<"Failed to add new fd to epoll\n";
                 return -1;
@@ -76,13 +76,14 @@ namespace FiberConn
             event_priority_.insert(sockfd, priority);
             return 0;
         }
-        int modifyTrack(int sockfd, uint32_t mask, Callback cb, EventPriority priority){
+        int modifyTrack(int sockfd, uint32_t mask, EventPriority priority, Callback cb){
             if(modifyEpollInterest(epollfd_, sockfd, mask) == -1){
                 std::cerr<<"Failed to mpdify fd to epoll\n";
                 return -1;
             }
             event_callback_.insert(sockfd, cb);
             event_priority_.insert(sockfd, priority);
+            return 0;
         }
         int runCallback(std::pair<EventPriority, struct epoll_event> new_event)
         {
@@ -91,7 +92,7 @@ namespace FiberConn
             Callback cb;
             if (event_callback_.get(temp_fd, cb))
             {
-                cb(temp_fd);
+                cb(new_event.second);
                 return 0;
             }
             else
@@ -129,6 +130,8 @@ namespace FiberConn
                     {
                         /*Push all these events to priority queue*/
                         int tempfd = events_[i].data.fd;
+                        std::cout<<"new event sock: "<<tempfd<<"\n";
+                        
                         EventPriority ev_priority = NEW_SOCK;
                         event_priority_.get(tempfd, ev_priority);
                         event_queue_.push(std::make_pair(ev_priority, events_[i]));
@@ -137,6 +140,7 @@ namespace FiberConn
                 else
                 {
                     /*Dead reactor*/
+                    std::cout<<"exiting reactor: no more work pending\n";
                     return 0;
                 }
             }
