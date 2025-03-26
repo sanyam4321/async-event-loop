@@ -13,14 +13,9 @@ namespace FiberConn
 {
     enum EventPriority
     {
-        LOW,
-        HIGH
-    };
-
-    enum FDType
-    {
         LISTEN_SOCK,
-        NEW_SOCK
+        NEW_SOCK,
+        HELPER_SOCK
     };
 
     class IOReactor
@@ -42,7 +37,7 @@ namespace FiberConn
 
         std::priority_queue<std::pair<EventPriority, struct epoll_event>, std::vector<std::pair<EventPriority, struct epoll_event>>, PQComparator> event_queue_;
         ThreadSafeMap<int, Callback> event_callback_;
-        ThreadSafeMap<int, FDType> event_type_;
+        ThreadSafeMap<int, EventPriority> event_priority_;
 
     public:
         IOReactor(int max_events)
@@ -67,19 +62,27 @@ namespace FiberConn
             }
             event_callback_.insert(listen_sock, cb);
             /*set listen sock fdtype to LISTEN_SOCK*/
-            event_type_.insert(listen_sock, LISTEN_SOCK);
+            event_priority_.insert(listen_sock, LISTEN_SOCK);
             return 0;
         }
 
-        int asyncTrack(int sockfd, uint32_t mask, Callback cb){
+        int addTrack(int sockfd, uint32_t mask, Callback cb, EventPriority priority){
             if(addEpollInterest(epollfd_, sockfd, mask) == -1){
                 std::cerr<<"Failed to add new fd to epoll\n";
                 return -1;
             }
             /*add the callback to map*/
             event_callback_.insert(sockfd, cb);
-            event_type_.insert(sockfd, NEW_SOCK);
+            event_priority_.insert(sockfd, priority);
             return 0;
+        }
+        int modifyTrack(int sockfd, uint32_t mask, Callback cb, EventPriority priority){
+            if(modifyEpollInterest(epollfd_, sockfd, mask) == -1){
+                std::cerr<<"Failed to mpdify fd to epoll\n";
+                return -1;
+            }
+            event_callback_.insert(sockfd, cb);
+            event_priority_.insert(sockfd, priority);
         }
         int runCallback(std::pair<EventPriority, struct epoll_event> new_event)
         {
@@ -125,19 +128,10 @@ namespace FiberConn
                     for (int i = 0; i < num_events; i++)
                     {
                         /*Push all these events to priority queue*/
-                        int temp_fd = events_[i].data.fd;
-                        EventPriority event_priority = LOW;
-                        FDType temp_fd_type;
-                        event_type_.get(temp_fd, temp_fd_type);
-                        if (temp_fd_type == LISTEN_SOCK)
-                        {
-                            event_priority = LOW;
-                        }
-                        else if (temp_fd_type == NEW_SOCK)
-                        {
-                            event_priority = HIGH;
-                        }
-                        event_queue_.push(std::make_pair(event_priority, events_[i]));
+                        int tempfd = events_[i].data.fd;
+                        EventPriority ev_priority = NEW_SOCK;
+                        event_priority_.get(tempfd, ev_priority);
+                        event_queue_.push(std::make_pair(ev_priority, events_[i]));
                     }
                 }
                 else

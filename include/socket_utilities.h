@@ -148,6 +148,17 @@ namespace FiberConn
         }
         return 0;
     }
+    int modifyEpollInterest(int epollfd, int fd, uint32_t event_mask){
+        struct epoll_event ev_hint;
+        ev_hint.data.fd = fd;
+        ev_hint.events = event_mask;
+        if (epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &ev_hint) == -1)
+        {
+            std::cerr << "epoll ctl error: " << strerror(errno) << std::endl;
+            return -1;
+        }
+        return 0;
+    }
     /*returns accepted socket*/
     int acceptConnection(int listen_sock)
     {
