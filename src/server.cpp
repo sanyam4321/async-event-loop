@@ -1,7 +1,8 @@
 #include "socket_utilities.h"
 #include "reactor.h"
+#include "http_connection.h"
 
-
+std::unordered_map<int, FiberConn::HttpConnection> connection_state;
 
 int main(int argc, char *argv[]){
 
