@@ -83,7 +83,6 @@ namespace FiberConn
 
         if ((sockfd = socket(endpoint->ai_family, endpoint->ai_socktype, endpoint->ai_protocol)) == -1)
         {
-            std::cerr << "socket error: " << strerror(errno) << std::endl;
             return -1;
         }
 
@@ -92,7 +91,6 @@ namespace FiberConn
             int yes = 1;
             if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1)
             {
-                std::cerr << "socket reuse error: " << "setsockopt" << std::endl;
                 return -1;
             }
         }
@@ -101,7 +99,6 @@ namespace FiberConn
         {
             if (fcntl(sockfd, F_SETFL, O_NONBLOCK) == -1)
             {
-                std::cerr << "socket non-blocking error: " << strerror(errno) << std::endl;
                 return -1;
             }
         }
@@ -114,12 +111,10 @@ namespace FiberConn
     {
         if (bind(sockfd, endpoint->ai_addr, endpoint->ai_addrlen) == -1)
         {
-            std::cerr << "bind error: " << strerror(errno) << std::endl;
             return -1;
         }
         if (listen(sockfd, backlog) == -1)
         {
-            std::cerr << "listen error: " << strerror(errno) << std::endl;
             return -1;
         }
         return 0;
@@ -131,7 +126,6 @@ namespace FiberConn
         int epollfd;
         if ((epollfd = epoll_create1(0)) == -1)
         {
-            std::cerr << "epoll creare error: " << strerror(errno) << std::endl;
             return -1;
         }
         return epollfd;
@@ -143,7 +137,6 @@ namespace FiberConn
         ev_hint.events = event_mask;
         if (epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &ev_hint) == -1)
         {
-            std::cerr << "epoll ctl error: " << strerror(errno) << std::endl;
             return -1;
         }
         return 0;
@@ -154,7 +147,12 @@ namespace FiberConn
         ev_hint.events = event_mask;
         if (epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &ev_hint) == -1)
         {
-            std::cerr << "epoll ctl error: " << strerror(errno) << std::endl;
+            return -1;
+        }
+        return 0;
+    }
+    int removeEpollInterest(int epollfd, int fd){
+        if(epoll_ctl(epollfd, fd, EPOLL_CTL_DEL, NULL) == -1){
             return -1;
         }
         return 0;
@@ -168,13 +166,11 @@ namespace FiberConn
 
         if ((newfd = accept(listen_sock, (struct sockaddr *)&client_addr, &addr_size)) == -1)
         {
-            std::cerr << "accept error: " << strerror(errno) << std::endl;
             return -1;
         }
 
         if (fcntl(newfd, F_SETFL, O_NONBLOCK) == -1)
         {
-            std::cerr << "socket non-blocking error: " << strerror(errno) << std::endl;
             return -1;
         }
         char client_ip[INET6_ADDRSTRLEN];
@@ -208,7 +204,12 @@ namespace FiberConn
 
         if (connect(sockfd, endpoint->ai_addr, endpoint->ai_addrlen) == -1)
         {
-            std::cerr << "connect error: " << strerror(errno) << std::endl;
+            if(errno == EINPROGRESS || errno == EAGAIN){
+                return sockfd;
+            }
+            else{
+                return -1;
+            }
         }
         return sockfd;
     }

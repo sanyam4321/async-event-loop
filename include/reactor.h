@@ -31,7 +31,7 @@ namespace FiberConn
             bool operator()(const std::pair<EventPriority, struct epoll_event> &a,
                             const std::pair<EventPriority, struct epoll_event> &b) const
             {
-                return a.first > b.first;
+                return a.first < b.first;
             }
         };
 
@@ -53,15 +53,11 @@ namespace FiberConn
 
         int asyncAccept(int listen_sock, Callback cb)
         {
-            /*developer will have to write the logic of accepting the connection and asyncTrack it to reactor*/
-            /*callback will contain the listening sock*/
-            /*it will register the main listening socket and register a callback in the map*/
             if(addEpollInterest(epollfd_, listen_sock, EPOLLIN) == -1){
                 std::cerr<<"async accept failed\n";
                 return -1;
             }
             event_callback_.insert(listen_sock, cb);
-            /*set listen sock fdtype to LISTEN_SOCK*/
             event_priority_.insert(listen_sock, LISTEN_SOCK);
             return 0;
         }
@@ -71,18 +67,26 @@ namespace FiberConn
                 std::cerr<<"Failed to add new fd to epoll\n";
                 return -1;
             }
-            /*add the callback to map*/
             event_callback_.insert(sockfd, cb);
             event_priority_.insert(sockfd, priority);
             return 0;
         }
         int modifyTrack(int sockfd, uint32_t mask, EventPriority priority, Callback cb){
             if(modifyEpollInterest(epollfd_, sockfd, mask) == -1){
-                std::cerr<<"Failed to mpdify fd to epoll\n";
+                std::cerr<<"Failed to modify fd to epoll\n";
                 return -1;
             }
             event_callback_.insert(sockfd, cb);
             event_priority_.insert(sockfd, priority);
+            return 0;
+        }
+        int removeTrack(int sockfd){
+            if(removeEpollInterest(epollfd_, sockfd) == -1){
+                std::cerr<<"Failed to remove fd from epoll\n";
+                return -1;
+            }
+            event_callback_.remove(sockfd);
+            event_priority_.remove(sockfd);
             return 0;
         }
         int runCallback(std::pair<EventPriority, struct epoll_event> new_event)
@@ -130,7 +134,6 @@ namespace FiberConn
                     {
                         /*Push all these events to priority queue*/
                         int tempfd = events_[i].data.fd;
-                        std::cout<<"new event sock: "<<tempfd<<"\n";
                         
                         EventPriority ev_priority = NEW_SOCK;
                         event_priority_.get(tempfd, ev_priority);
