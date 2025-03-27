@@ -93,6 +93,7 @@ namespace FiberConn
         {
             /*get the callback from the hashmap and run it*/
             int temp_fd = new_event.second.data.fd;
+            std::cout<<"Running callback for socket: "<<temp_fd<<"\n";
             Callback cb;
             if (event_callback_.get(temp_fd, cb))
             {

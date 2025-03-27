@@ -40,7 +40,10 @@ int main(int argc, char *argv[]){
             ioc.addTrack(api_sock, mask, FiberConn::HELPER_SOCK, [&ioc](struct epoll_event ev){
                 int send_bytes = 0;
                 char request_buffer[] = 
-                    "GET / HTTP/1.1"
+                    "GET / HTTP/1.1\r\n"
+                      "Host: localhost\r\n"
+                      "Connection: close\r\n"
+                      "\r\n"
                 ;
                 while((send_bytes = send(ev.data.fd, request_buffer, sizeof(request_buffer), MSG_DONTWAIT)) < sizeof(request_buffer)){
                     std::cout<<"sent: "<<send_bytes<<"\n";
@@ -52,6 +55,7 @@ int main(int argc, char *argv[]){
                         while((bytes_read = recv(ev.data.fd, temp_buffer, 1024, MSG_DONTWAIT)) > 0){
                             std::cout<<std::string(temp_buffer, bytes_read)<<"\n";
                         }
+                        close(ev.data.fd);
                     });
                 }
             });
