@@ -48,7 +48,7 @@ namespace FiberConn
         }
         ~IOReactor()
         {
-            delete events_;
+            delete[] events_;
         }
 
         int asyncAccept(int listen_sock, Callback cb)

@@ -213,4 +213,10 @@ namespace FiberConn
         }
         return sockfd;
     }
+    int closeConnection(int socketfd){
+        if(close(socketfd) == -1){
+            return -1;
+        }
+        return 0;
+    }
 }
