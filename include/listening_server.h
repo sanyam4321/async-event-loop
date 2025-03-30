@@ -25,10 +25,10 @@ namespace FiberConn {
             socket = FiberConn::getSocket(endpoint, true, false);
             FiberConn::bindAndListen(socket, endpoint, CONN_BACKLOG);
         }
-        int listen(std::function<void(Connection *)> cb){
-            status = ioc.asyncAccept(socket, [this, &cb](struct epoll_event ev1){
+        int listen(FiberConn::IOReactor &ioc,std::function<void(Connection *)> &cb, std::function<void(Connection *)> &err){
+            status = ioc.asyncAccept(socket, [&ioc, &cb, &err](struct epoll_event ev1){
                 /*Check for any disconnections*/
-                if(ev1.events & EPOLLERR || ev1.events & EPOLLHUP){
+                if(ev1.events & EPOLLERR){
                     /*clean up*/
                 }
                 else if(ev1.events & EPOLLIN){
@@ -39,17 +39,12 @@ namespace FiberConn {
                     }
                     else{
                         /*create a new connection object*/
-                        FiberConn::Connection *conn = new FiberConn::Clientconnection(newfd, this->ioc);
+                        FiberConn::Connection *conn = new FiberConn::Clientconnection(newfd, ioc);
+
                         uint32_t mask = EPOLLIN | EPOLLET | EPOLLRDHUP | EPOLLERR | EPOLLHUP;
-                        ioc.addTrack(newfd, mask, NEW_SOCK, [conn, &cb](struct epoll_event ev2){
-                            if(ev2.events & EPOLLERR || ev2.events & EPOLLHUP || ev2.events & EPOLLRDHUP){
-                                std::cout<<"connection closed\n";
-                                FiberConn::closeConnection(ev2.data.fd);
-                                delete conn;
-                            }   
-                            else{
-                                conn->handleEvent(ev2, cb);
-                            }
+
+                        ioc.addTrack(newfd, mask, NEW_SOCK, [conn, &ioc, &cb, &err](struct epoll_event ev2){
+                            
                         });
                     }
                 }
