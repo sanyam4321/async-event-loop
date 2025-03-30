@@ -3,7 +3,7 @@
 HOST="127.0.0.1"
 PORT="3490"
 CLIENT_EXEC="./client"
-NUM_CLIENTS=10000
+NUM_CLIENTS=1000
 
 echo "Starting $NUM_CLIENTS clients..."
 
