@@ -40,7 +40,7 @@ public:
 
                     uint32_t mask = EPOLLIN | EPOLLET | EPOLLRDHUP | EPOLLERR | EPOLLHUP;
 
-                    ioc.addTrack(newfd, mask, NEW_SOCK, [conn, &ioc, cb, err](struct epoll_event ev2) {
+                    ioc.addTrack(newfd, mask, NEW_SOCK, [conn, cb, err](struct epoll_event ev2) {
                         conn->handleEvent(ev2, cb, err);
                     });
                 }

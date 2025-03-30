@@ -44,6 +44,7 @@ public:
     size_t recv_buffer_size;
     std::vector<char> recvBuffer;
 
+    size_t sent_bytes;
     std::vector<char> sendBuffer;
 
     std::function<void(Connection*)> cb;
@@ -62,6 +63,8 @@ public:
 
         recv_buffer_size = 1024;
         recvBuffer = std::vector<char>(recv_buffer_size, 0);
+
+        sent_bytes = 0;
 
         parser = new llhttp_t();
         settings = new llhttp_settings_t();
@@ -86,7 +89,6 @@ public:
     {
         closeConnection(this->socket);
         delete request;
-        delete response;
         delete parser;
         delete settings;
     }
@@ -217,6 +219,13 @@ public:
 
         this->response = static_cast<HttpResponse*>(data);
         serialize();
+        /*now the sendBuffer is filled*/
+        uint32_t mask = EPOLLOUT | EPOLLET | EPOLLRDHUP | EPOLLERR | EPOLLHUP;
+        FiberConn::Connection* conn = this;
+        ioc.modifyTrack(this->socket, mask, HELPER_SOCK, [conn, success, error](struct epoll_event ev){
+          conn->handleEvent(ev, success, error);
+        });
+
     }
     void read(void* data_pointer)
     {
@@ -246,8 +255,31 @@ public:
             /* what happens if error */
             if (read_bytes == 0) {
                 error(this);
+                return;
             }
         } else if (ev.events & EPOLLOUT) {
+          int bytes_sent;
+          while((bytes_sent = send(this->socket, this->sendBuffer.data() + this->sent_bytes, this->sendBuffer.size()-this->sent_bytes, MSG_DONTWAIT)) > 0){
+            this->sent_bytes += bytes_sent;
+
+            if(this->sent_bytes >= this->sendBuffer.size()){
+              this->sendBuffer.clear();
+              this->sent_bytes = 0;
+              /*Reset the connection*/
+              success(this);
+              break;
+            }
+          }
+
+          if(bytes_sent == -1){
+            if(errno == EAGAIN || errno == EWOULDBLOCK){
+              return;
+            }
+            else{
+              error(this);
+              return;
+            }
+          }
         }
     }
 };
