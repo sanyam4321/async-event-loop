@@ -13,7 +13,7 @@ namespace FiberConn
 {
     enum EventPriority
     {
-        LISTEN_SOCK,
+        LISTEN_SOCK = 0,
         NEW_SOCK,
         HELPER_SOCK
     };
@@ -31,7 +31,7 @@ namespace FiberConn
             bool operator()(const std::pair<EventPriority, struct epoll_event> &a,
                             const std::pair<EventPriority, struct epoll_event> &b) const
             {
-                return a.first < b.first;
+                return a.first > b.first;
             }
         };
 

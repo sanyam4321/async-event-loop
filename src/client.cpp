@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
 
     freeaddrinfo(servlist);
 
-    char buffer[] = "GET / HTTP/1.1";
+    char buffer[] = "GET / HTTP/1.1\r\n\r\n";
     int bytes_write;
     bytes_write = send(sockfd, buffer, strlen(buffer), 0);
     std::cout<<bytes_write<<" "<< buffer<<std::endl;

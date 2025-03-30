@@ -1,7 +1,7 @@
 #pragma once
 #include "socket_utilities.h"
 #include "reactor.h"
-#include "functional"
+#include <functional>
 #include "connection_types.h"
 
 #define CONN_BACKLOG 10000
@@ -25,7 +25,7 @@ namespace FiberConn {
             socket = FiberConn::getSocket(endpoint, true, false);
             FiberConn::bindAndListen(socket, endpoint, CONN_BACKLOG);
         }
-        int listen(FiberConn::IOReactor &ioc,std::function<void(Connection *)> &cb, std::function<void(Connection *)> &err){
+        int listen(FiberConn::IOReactor &ioc, std::function<void(Connection *)> &cb, std::function<void(Connection *)> &err){
             status = ioc.asyncAccept(socket, [&ioc, &cb, &err](struct epoll_event ev1){
                 /*Check for any disconnections*/
                 if(ev1.events & EPOLLERR){
@@ -39,7 +39,7 @@ namespace FiberConn {
                     }
                     else{
                         /*create a new connection object*/
-                        FiberConn::Connection *conn = new FiberConn::Clientconnection(newfd, ioc);
+                        FiberConn::Connection *conn = new FiberConn::Clientconnection(newfd, ioc, cb, err);
 
                         uint32_t mask = EPOLLIN | EPOLLET | EPOLLRDHUP | EPOLLERR | EPOLLHUP;
 
