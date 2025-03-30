@@ -54,7 +54,7 @@ namespace FiberConn
 
                 // convert addr to readable format
                 inet_ntop(server_info->ai_family, addr, ip_string, sizeof(ip_string));
-                std::cout << ip_string << " " << port << " " << ip_version << std::endl;
+                // std::cout << ip_string << " " << port << " " << ip_version << std::endl;
             }
             else
             {
@@ -65,7 +65,7 @@ namespace FiberConn
 
                 // convert addr to readable format
                 inet_ntop(server_info->ai_family, addr, ip_string, sizeof(ip_string));
-                std::cout << ip_string << " " << port << " " << ip_version << std::endl;
+                // std::cout << ip_string << " " << port << " " << ip_version << std::endl;
             }
             if (server_info->ai_family == address_family)
             {
@@ -193,7 +193,7 @@ namespace FiberConn
             std::cerr << "Unknown address family" << std::endl;
             close(newfd);
         }
-        std::cout<<"client ip: "<< client_ip << " client port: "<<client_port<<"\n";
+        // std::cout<<"client ip: "<< client_ip << " client port: "<<client_port<<"\n";
         return newfd;
     }
     /*returns connected socket*/

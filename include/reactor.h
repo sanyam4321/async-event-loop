@@ -92,7 +92,7 @@ public:
     {
         /*get the callback from the hashmap and run it*/
         int temp_fd = new_event.second.data.fd;
-        std::cout << "Running callback for socket: " << temp_fd << "\n";
+        // std::cout << "Running callback for socket: " << temp_fd << "\n";
         Callback cb;
         if (event_callback_.get(temp_fd, cb)) {
             cb(new_event.second);
@@ -133,7 +133,7 @@ public:
                 }
             } else {
                 /*Dead reactor*/
-                std::cout << "exiting reactor: no more work pending\n";
+                // std::cout << "exiting reactor: no more work pending\n";
                 return 0;
             }
         }

@@ -95,7 +95,7 @@ public:
 
     static int on_message_begin(llhttp_t* parser)
     {
-        std::cout << "[Callback] Message begin\n";
+        // std::cout << "[Callback] Message begin\n";
         return 0;
     }
 

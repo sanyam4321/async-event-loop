@@ -4,7 +4,7 @@
 #include "socket_utilities.h"
 #include <functional>
 
-#define CONN_BACKLOG 10000
+#define CONN_BACKLOG 100000
 
 namespace FiberConn {
 class HttpServer {
